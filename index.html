@@ -3,204 +3,228 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GIF Dançante — Player</title>
-  <meta name="description" content="Cole um link de música (MP3, SoundCloud ou YouTube), escolha GIFs e veja eles dançarem sincronizados com a música." />
+  <title>GIF Dançante — Player Completo</title>
+  <meta name="description" content="Player de GIFs sincronizados com áudio — temas, histórico, animações avançadas, embeds e upload local." />
 
   <style>
     :root{
-      --bg: #0d0d0d;
-      --card: #141414;
+      --bg: #0b0b0d;
+      --card: #111217;
       --text: #eaeaea;
-      --accent: #4caf50;
       --muted: #9aa0a6;
+      --accent: #7c4dff;
+      --glass: rgba(255,255,255,0.04);
+      --radius: 12px;
+      --gap: 12px;
     }
 
-    /* Theme: Neon */
-    .theme-neon{ --accent: #ff2d95; --bg: #07010a; --card:#0f0710; }
-    .theme-vapor{ --accent: #7a5cff; --bg:#0b0b1a; --card:#0f0e24; }
-    .theme-min{ --accent: #03a9f4; --bg:#ffffff; --card:#f4f6f8; --text:#111; --muted:#666; }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;padding:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:linear-gradient(180deg,var(--bg), #070707 90%);color:var(--text)}
 
-    html,body{ height:100%; margin:0; }
-    body{
-      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-      background: linear-gradient(180deg,var(--bg), #070707 80%);
-      color:var(--text);
-      display:flex; align-items:flex-start; justify-content:center; padding:24px;
-      box-sizing: border-box;
-    }
+    .app{max-width:1200px;margin:28px auto;padding:18px;background:linear-gradient(180deg,var(--card), #0b0b0b);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    h1{margin:0;font-size:1.2rem}
+    .subtitle{color:var(--muted);font-size:0.9rem}
 
-    .app{
-      width:100%; max-width:1100px; background:linear-gradient(180deg,var(--card), #0b0b0b);
-      border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,0.6); padding:18px; box-sizing:border-box;
-    }
+    .topbar{display:flex;gap:12px;align-items:center}
+    .themebar{display:flex;gap:8px;align-items:center}
+    select,input,button{font-family:inherit}
 
-    header{ display:flex; gap:12px; align-items:center; justify-content:space-between; }
-    h1{ margin:0; font-size:1.2rem; }
-    .subtitle{ color:var(--muted); font-size:0.9rem }
+    .controls{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-top:16px}
+    .card{background:var(--glass);padding:14px;border-radius:var(--radius);backdrop-filter: blur(6px)}
 
-    .controls{ display:grid; grid-template-columns:1fr 320px; gap:16px; margin-top:16px; align-items:start; }
+    .inputs{display:flex;flex-direction:column;gap:10px}
+    input[type=text], select, input[type=file], input[type=number], .small-input{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);outline:none}
 
-    .card{ background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; }
+    .row{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
 
-    .inputs{ display:flex; flex-direction:column; gap:10px; }
-    input[type=text], select, input[type=file], input[type=number] { padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--text); outline:none; }
+    .player{display:flex;gap:8px;align-items:center}
+    .player audio{width:100%}
 
-    .row{ display:flex; gap:8px; }
-    button{ background:var(--accent); color: #fff; border: none; padding:10px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
-    button.ghost{ background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--text); }
+    .gif-area{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+    .gif-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:10px;border-radius:10px;display:flex;flex-direction:column;gap:8px;align-items:center;transition:transform .12s ease, box-shadow .12s ease;cursor:pointer}
+    .gif-card:hover{transform:translateY(-6px);box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+    .gif-card img{width:100%;height:140px;object-fit:contain;border-radius:8px;transform-origin:center center}
 
-    .player{ display:flex; gap:8px; align-items:center; }
-    .player audio{ width:100%; }
+    .settings{display:flex;flex-direction:column;gap:8px}
+    label{font-size:0.85rem;color:var(--muted)}
+    .small{font-size:0.85rem;color:var(--muted)}
 
-    .gif-area{ margin-top:18px; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; }
-    .gif-card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:8px; border-radius:8px; display:flex; flex-direction:column; gap:8px; align-items:center; cursor:pointer; transition: transform .12s ease; }
-    .gif-card img{ width:100%; height:140px; object-fit:contain; border-radius:6px; transform-origin:center center; }
+    footer{margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
 
-    .settings{ display:flex; flex-direction:column; gap:8px; }
-    label{ font-size:0.85rem; color:var(--muted); }
+    /* Animations */
+    .beat-animation{animation-name:beatMove;animation-iteration-count:infinite;animation-timing-function:ease-in-out}
+    @keyframes beatMove{0%{transform:translateY(0) scale(1) rotate(0deg)}25%{transform:translateY(-8px) scale(1.02) rotate(2deg)}50%{transform:translateY(0) scale(1) rotate(0deg)}75%{transform:translateY(-6px) scale(1.01) rotate(-2deg)}100%{transform:translateY(0) scale(1) rotate(0deg)}}
 
-    .small{ font-size:0.85rem; color:var(--muted); }
+    /* Theme variants (applied to body class) */
+    body.theme-neon{--accent:#ff2d95;--bg:#07010a;--card:#0f0710}
+    body.theme-vapor{--accent:#7a5cff;--bg:#0b0b1a;--card:#0f0e24}
+    body.theme-min{--accent:#03a9f4;--bg:#ffffff;--card:#f4f6f8;--text:#111;--muted:#666}
+    body.theme-dark{--accent:#8bc34a;--bg:#070707;--card:#0b0b0b}
+    body.theme-rgb{--accent:#ff6b6b;--bg:#050406;--card:#0a0a0a}
 
-    footer{ margin-top:18px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    /* theme preview strip */
+    .theme-preview{display:flex;gap:8px}
+    .theme-swatch{width:28px;height:28px;border-radius:6px;cursor:pointer;border:2px solid rgba(255,255,255,0.04)}
 
-    /* Responsive */
-    @media (max-width:880px){
-      .controls{ grid-template-columns: 1fr; }
-      .player{ flex-direction:column; align-items:stretch; }
-    }
+    /* customizer */
+    .customizer{display:flex;flex-direction:column;gap:8px}
+    .color-row{display:flex;gap:8px;align-items:center}
+    .history{max-height:160px;overflow:auto;padding:8px;border-radius:8px;background:rgba(0,0,0,0.06)}
 
-    /* Animation helper classes - we'll manipulate animation-duration to sync to beat */
-    .beat-animation{ animation-name:beatMove; animation-iteration-count:infinite; animation-timing-function: ease-in-out; }
-    @keyframes beatMove{
-      0% { transform: translateY(0) scale(1) rotate(0deg); }
-      25% { transform: translateY(-8px) scale(1.02) rotate(2deg); }
-      50% { transform: translateY(0) scale(1) rotate(0deg); }
-      75% { transform: translateY(-6px) scale(1.01) rotate(-2deg); }
-      100% { transform: translateY(0) scale(1) rotate(0deg); }
-    }
-
-    /* subtle glow for neon */
-    .theme-neon .gif-card img{ filter: drop-shadow(0 6px 18px rgba(255,45,149,0.25)); }
-
-    /* controls state */
-    .muted{ opacity:0.5 }
-
-    /* tooltip-like small note */
-    .note { font-size:0.8rem; color:var(--muted); margin-top:6px; }
+    /* responsive */
+    @media (max-width:980px){.controls{grid-template-columns:1fr}.player{flex-direction:column;align-items:stretch}}
   </style>
 </head>
 <body class="theme-neon">
   <div class="app">
     <header>
       <div>
-        <h1>GIF Dançante</h1>
-        <div class="subtitle">Cole link da música (MP3, SoundCloud ou YouTube), faça upload local, adicione GIFs e deixe-os dançar.</div>
+        <h1>GIF Dançante — Player Completo</h1>
+        <div class="subtitle">Escolha tema, arraste GIFs, cole links e veja-os dançarem com a batida.</div>
       </div>
 
-      <div style="display:flex; gap:8px; align-items:center;">
-        <select id="themeSelect" title="Tema">
-          <option value="theme-neon">Neon</option>
-          <option value="theme-vapor">Vaporwave</option>
-          <option value="theme-min">Minimal</option>
-        </select>
-        <button id="addGifBtn" class="ghost">Adicionar GIF</button>
-        <button id="resetBtn" class="ghost">Reset</button>
+      <div class="topbar">
+        <div class="themebar">
+          <label class="small" style="margin-right:6px">Tema</label>
+          <select id="themeSelect">
+            <option value="theme-neon">Neon</option>
+            <option value="theme-vapor">Vaporwave</option>
+            <option value="theme-min">Minimal</option>
+            <option value="theme-dark">Dark</option>
+            <option value="theme-rgb">Gamer RGB</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-left:12px">
+          <button id="addGifBtn" class="ghost">Adicionar GIF</button>
+          <button id="resetBtn" class="ghost">Reset</button>
+        </div>
       </div>
     </header>
 
     <div class="controls">
       <div class="card">
         <div class="inputs">
-          <label>Link da música (MP3 direto) — para melhor análise, use MP3 direto</label>
+          <label>Link da música (MP3 direto)</label>
           <input id="mp3Input" type="text" placeholder="https://exemplo.com/minha-musica.mp3" />
 
-          <label>Ou cole um link do YouTube</label>
+          <label>Ou cole link do YouTube</label>
           <input id="ytInput" type="text" placeholder="https://www.youtube.com/watch?v=..." />
 
-          <label>Ou cole um link do SoundCloud</label>
+          <label>Ou cole link do SoundCloud</label>
           <input id="scInput" type="text" placeholder="https://soundcloud.com/usuario/faixa" />
 
           <label>Ou faça upload de um arquivo de áudio (local)</label>
           <input id="fileInput" type="file" accept="audio/*" />
 
-          <div class="row">
+          <div class="row" style="margin-top:8px">
             <button id="playBtn">▶️ Play</button>
             <button id="pauseBtn" class="ghost">⏸ Pause</button>
             <button id="stopBtn" class="ghost">⏹ Stop</button>
           </div>
 
-          <div class="player small">
-            <label style="width:70px;">Volume</label>
+          <div class="player small" style="margin-top:8px">
+            <label style="width:70px">Volume</label>
             <input id="volume" type="range" min="0" max="1" step="0.01" value="0.9" />
           </div>
 
           <div class="player small">
-            <label style="width:70px;">Gain</label>
+            <label style="width:70px">Gain</label>
             <input id="gain" type="range" min="0" max="3" step="0.01" value="1.0" />
           </div>
 
-          <div class="row" style="align-items:center;">
-            <label style="margin-right:6px;">Detecção</label>
+          <div class="row" style="align-items:center">
+            <label style="margin-right:6px">Detecção</label>
             <select id="modeSelect">
               <option value="auto">Auto (analisar)</option>
               <option value="manual">Manual BPM</option>
             </select>
-            <input id="manualBpm" type="number" min="30" max="300" value="120" style="width:96px; margin-left:8px;"/>
+            <input id="manualBpm" type="number" min="30" max="300" value="120" style="width:96px;margin-left:8px" />
           </div>
 
           <label>Sensibilidade do detector</label>
           <input id="sensitivity" type="range" min="0.5" max="3.0" step="0.01" value="1.3" />
 
-          <label class="small">Observação: análise de YouTube/SoundCloud pode ser limitada por CORS; MP3 direto ou upload local dá o resultado mais confiável.</label>
+          <label class="small">Observação: YouTube/SoundCloud podem ter limitações de CORS — MP3 direto ou upload local é mais confiável.</label>
+
+          <div style="margin-top:8px">
+            <label class="small">Histórico de faixas</label>
+            <div id="trackHistory" class="history"></div>
+          </div>
         </div>
       </div>
 
       <div class="card">
         <div class="settings">
-          <label>GIFs adicionados (clique em um para remover)</label>
+          <label>GIFs adicionados (clique para remover)</label>
           <div id="gifArea" class="gif-area"></div>
 
           <div>
             <input id="newGifUrl" type="text" placeholder="Cole link direto do GIF (ex: https://...gif)" />
-            <div class="row" style="margin-top:8px;">
+            <div class="row" style="margin-top:8px">
               <button id="addGifUrlBtn">Adicionar URL</button>
               <button id="addSampleBtn" class="ghost">Adicionar amostras</button>
             </div>
-            <div class="note">Você pode adicionar GIFs via URL ou usar o botão <em>Adicionar GIF</em> para colar via prompt.</div>
+            <div class="note">Você pode arrastar + soltar GIFs diretamente na área principal também.</div>
+          </div>
+
+          <hr style="opacity:0.06;border:none;height:1px;margin:8px 0">
+
+          <div class="customizer">
+            <label class="small">Personalizar tema</label>
+            <div class="color-row">
+              <label class="small" style="width:90px">Cor de destaque</label>
+              <input id="accentColor" type="color" value="#7c4dff" />
+            </div>
+            <div class="color-row">
+              <label class="small" style="width:90px">Fundo</label>
+              <input id="bgColor" type="color" value="#0b0b0b" />
+            </div>
+            <div class="row">
+              <button id="applyThemeBtn" class="ghost">Aplicar Tema</button>
+              <button id="resetThemeBtn" class="ghost">Reset Tema</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+        <div style="flex:1">
+          <div class="player" style="gap:12px">
+            <audio id="audioEl" crossorigin="anonymous"></audio>
+            <div style="flex:1">
+              <div class="small">BPM detectado: <span id="detectedBpm">—</span> | Beats/s: <span id="beatsPerSec">—</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="width:320px;text-align:right">
+          <div class="small">Feito para GitHub Pages • Salve como index.html</div>
+        </div>
+      </div>
+
+      <div id="dropArea" style="margin-top:12px;padding:12px;border-radius:10px;border:2px dashed rgba(255,255,255,0.03);text-align:center">Arraste GIFs aqui ou clique em <strong>Adicionar GIF</strong></div>
+    </div>
+
     <footer>
-      <div class="small">BPM detectado: <span id="detectedBpm">—</span> | Beats/s: <span id="beatsPerSec">—</span></div>
-      <div class="small">Feito para GitHub Pages • Salve como index.html</div>
+      <div class="small">Tip: para melhor detecção use arquivos MP3 ou upload local.</div>
+      <div class="small">Versão completa — agora com histórico, personalização e animações</div>
     </footer>
   </div>
 
-  <!-- Elementos invisíveis para player -->
-  <audio id="audioEl" crossorigin="anonymous"></audio>
+  <!-- Invisible slots for embeds -->
   <div id="ytPlayerRoot" style="display:none"></div>
   <div id="scPlayerRoot" style="display:none"></div>
 
   <script>
-    // ---- Helpers & State ----
+    // State
     const state = {
-      audioCtx: null,
-      analyser: null,
-      sourceNode: null,
-      gainNode: null,
-      raf: null,
-      lastBeatTime: 0,
-      bpm: null,
-      mode: 'auto',
-      gifs: [],
-      sensitivity: 1.3,
-      volume: 0.9,
-      fileObjectUrl: null,
-      ytPlayer: null,
-      scIframe: null,
-      beatTimestamps: [],
+      audioCtx: null, analyser: null, sourceNode: null, gainNode: null, raf:null,
+      lastBeatTime:0,bpm:null,mode:'auto',gifs:[],sensitivity:1.3,volume:0.9,fileObjectUrl:null,ytPlayer:null,scIframe:null,beatTimestamps:[],trackHistory:[]
     };
 
     // DOM
@@ -226,69 +250,69 @@
     const themeSelect = document.getElementById('themeSelect');
     const resetBtn = document.getElementById('resetBtn');
     const fileInput = document.getElementById('fileInput');
+    const trackHistoryEl = document.getElementById('trackHistory');
+    const dropArea = document.getElementById('dropArea');
+    const accentColor = document.getElementById('accentColor');
+    const bgColor = document.getElementById('bgColor');
+    const applyThemeBtn = document.getElementById('applyThemeBtn');
+    const resetThemeBtn = document.getElementById('resetThemeBtn');
 
-    // Initialize
+    // Init audio context
     function initAudioContext(){
       if (state.audioCtx) return;
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       state.audioCtx = new AudioContext();
       state.analyser = state.audioCtx.createAnalyser();
-      state.analyser.fftSize = 2048; // resolution
+      state.analyser.fftSize = 2048;
       state.gainNode = state.audioCtx.createGain();
       state.gainNode.gain.value = state.volume;
       state.analyser.smoothingTimeConstant = 0.85;
     }
 
-    // Create/update source from audio element
     function connectAudioElement(){
       if (!state.audioCtx) initAudioContext();
-      if (state.sourceNode) {
-        try { state.sourceNode.disconnect(); } catch(e){}
-      }
-      try {
+      if (state.sourceNode) try{ state.sourceNode.disconnect(); }catch(e){}
+      try{
         state.sourceNode = state.audioCtx.createMediaElementSource(audioEl);
-      } catch(e) {
-        // createMediaElementSource will fail if audioEl already used by different context or is a cross-origin non-CORS source
-        console.warn('createMediaElementSource failed:', e);
+      }catch(e){
+        console.warn('createMediaElementSource failed',e);
       }
-      if (state.sourceNode) {
+      if (state.sourceNode){
         state.sourceNode.connect(state.gainNode);
         state.gainNode.connect(state.analyser);
         state.analyser.connect(state.audioCtx.destination);
       } else {
-        // fallback: connect audioEl directly (no analysis)
-        console.warn('Sem sourceNode — a análise pode não funcionar para esta origem (CORS).');
+        console.warn('No sourceNode — analysis may not work (CORS).');
       }
     }
 
-    // Simple beat detection using energy vs history
+    // Beat detection (improved)
     const energyHistory = [];
     function analyzeBeat(){
       if (!state.analyser) return;
       const data = new Uint8Array(state.analyser.frequencyBinCount);
       state.analyser.getByteFrequencyData(data);
-      // compute instant energy
       let sum = 0;
-      for (let i=0;i<data.length;i++){ sum += data[i]*data[i]; }
+      for (let i=0;i<data.length;i++) sum += data[i]*data[i];
       const instantEnergy = sum / data.length;
 
-      // history
+      // push history, limit length
       energyHistory.push(instantEnergy);
-      if (energyHistory.length > 60) energyHistory.shift();
+      if (energyHistory.length > 120) energyHistory.shift();
 
-      // average
-      const avg = energyHistory.reduce((a,b)=>a+b,0) / energyHistory.length;
-      const sensitivity = parseFloat(sensitivityEl.value) || 1.3;
+      // compute average and variance to reduce false positives
+      const avg = energyHistory.reduce((a,b)=>a+b,0)/energyHistory.length;
+      const variance = energyHistory.reduce((a,b)=>a+(b-avg)*(b-avg),0)/energyHistory.length;
+      const threshold = (parseFloat(sensitivityEl.value) || 1.3) * (avg + Math.sqrt(variance));
 
-      // beat if instant > sensitivity * avg
-      if (instantEnergy > sensitivity * avg && Date.now() - state.lastBeatTime > 120) {
+      if (instantEnergy > threshold && Date.now() - state.lastBeatTime > 120){
         state.lastBeatTime = Date.now();
         registerBeat(state.lastBeatTime);
         onBeatDetected();
       }
 
-      // update estimated BPM using last few beats
-      if (state.beatTimestamps.length >= 2) {
+      // update BPM estimate
+      if (state.beatTimestamps.length >= 2){
         const diffs = [];
         for (let i=1;i<state.beatTimestamps.length;i++) diffs.push(state.beatTimestamps[i]-state.beatTimestamps[i-1]);
         const avgMs = diffs.reduce((a,b)=>a+b,0)/diffs.length;
@@ -298,277 +322,118 @@
         beatsPerSec.textContent = (bpm/60).toFixed(2);
       }
 
-      // visual feedback based on overall level
       const rms = Math.sqrt(instantEnergy);
       applyVisuals(rms);
-
       state.raf = requestAnimationFrame(analyzeBeat);
     }
 
-    function registerBeat(ts){
-      state.beatTimestamps.push(ts);
-      if (state.beatTimestamps.length > 12) state.beatTimestamps.shift();
-    }
+    function registerBeat(ts){ state.beatTimestamps.push(ts); if (state.beatTimestamps.length>16) state.beatTimestamps.shift(); }
 
     function applyVisuals(rms){
-      // Map rms to animation-duration (lower duration = faster beat)
-      const mode = modeSelect.value;
-      let baseMs = 500; // default
-      if (mode === 'manual'){
-        const bpm = Number(manualBpm.value) || 120;
-        baseMs = 60000 / bpm; // ms per beat
-      } else if (state.bpm){
-        baseMs = 60000 / state.bpm;
-      }
+      const mode = modeSelect.value; let baseMs = 500;
+      if (mode === 'manual'){ const bpm = Number(manualBpm.value) || 120; baseMs = 60000/bpm; }
+      else if (state.bpm) baseMs = 60000/state.bpm;
 
       const gain = Number(gainEl.value) || 1.0;
-      const normalized = Math.min(2, Math.max(0.05, (rms/20) * gain));
+      const normalized = Math.min(2, Math.max(0.05, (rms/24) * gain));
       const durationMs = Math.max(60, baseMs / normalized);
 
       const imgs = document.querySelectorAll('.gif-card img');
-      imgs.forEach((img, i) => {
+      imgs.forEach((img,i)=>{
         img.classList.add('beat-animation');
-        // add slight variation per gif
-        const offset = 1 + (i % 3) * 0.05;
-        img.style.animationDuration = (durationMs/1000 * offset).toFixed(3) + 's';
+        const offset = 1 + (i%4)*0.04;
+        img.style.animationDuration = (durationMs/1000 * offset).toFixed(3)+'s';
       });
     }
 
     function onBeatDetected(){
       const imgs = document.querySelectorAll('.gif-card img');
-      imgs.forEach(img => {
-        img.style.transform = 'translateY(-6px) scale(1.04)';
-        setTimeout(()=>{ img.style.transform = ''; }, 120);
-      });
+      imgs.forEach(img=>{ img.style.transform='translateY(-8px) scale(1.04)'; setTimeout(()=>{ img.style.transform=''; },160); });
     }
 
-    // ---- Controls ----
+    // Controls
     playBtn.addEventListener('click', async ()=>{
       if (!state.audioCtx) initAudioContext();
       if (state.audioCtx && state.audioCtx.state === 'suspended') await state.audioCtx.resume();
 
-      // stop previous
       stopAll(false);
+      const mp3 = mp3Input.value.trim(); const yt = ytInput.value.trim(); const sc = scInput.value.trim();
 
-      const mp3 = mp3Input.value.trim();
-      const yt = ytInput.value.trim();
-      const sc = scInput.value.trim();
+      if (state.fileObjectUrl){ audioEl.crossOrigin='anonymous'; audioEl.loop=false; audioEl.volume = Number(volumeEl.value)||0.9; connectAudioElement(); audioEl.play().catch(e=>console.warn('play failed',e)); state.raf = requestAnimationFrame(analyzeBeat); return; }
 
-      // priority: file input (already loaded) > mp3 url > soundcloud > youtube
-      if (state.fileObjectUrl) {
-        // local file already set on audioEl
-        audioEl.crossOrigin = "anonymous";
-        audioEl.loop = false;
-        audioEl.volume = Number(volumeEl.value) || 0.9;
-        connectAudioElement();
-        audioEl.play().catch(e=>console.warn('play failed',e));
-        state.raf = requestAnimationFrame(analyzeBeat);
-        return;
-      }
+      if (mp3){ audioEl.src = mp3; audioEl.crossOrigin='anonymous'; audioEl.loop=false; audioEl.volume = Number(volumeEl.value)||0.9; connectAudioElement(); audioEl.play().catch(e=>console.warn('play failed',e)); state.raf = requestAnimationFrame(analyzeBeat); addToHistory(mp3); return; }
 
-      if (mp3){
-        audioEl.src = mp3;
-        audioEl.crossOrigin = "anonymous";
-        audioEl.loop = false;
-        audioEl.volume = Number(volumeEl.value) || 0.9;
-        connectAudioElement();
-        audioEl.play().catch(e=>console.warn('play failed',e));
-        state.raf = requestAnimationFrame(analyzeBeat);
-        return;
-      }
-
-      if (sc){
-        // embed SoundCloud player and attempt to use Widget API for basic control.
-        embedSoundCloud(sc);
-        // Note: extracting audio for analysis from SC iframe is usually blocked by CORS.
-        // Suggestion shown to the user in console.
-        console.info('SoundCloud embedded — audio analysis may be limited due to CORS. For best results, use MP3 or local upload.');
-        return;
-      }
-
-      if (yt){
-        embedYouTube(yt);
-        console.info('YouTube embedded — audio analysis is unreliable due to CORS; use MP3/upload for best sync.');
-        return;
-      }
+      if (sc){ embedSoundCloud(sc); console.info('SoundCloud embedded — análise limitada por CORS.'); addToHistory(sc); return; }
+      if (yt){ embedYouTube(yt); console.info('YouTube embedded — análise limitada por CORS.'); addToHistory(yt); return; }
 
       alert('Cole um link MP3 direto, SoundCloud, YouTube ou faça upload de um arquivo de áudio.');
     });
 
-    pauseBtn.addEventListener('click', ()=>{
-      if (audioEl && !audioEl.paused) audioEl.pause();
-      if (state.ytPlayer) try{ state.ytPlayer.pauseVideo(); }catch(e){}
-      if (state.scIframe) try{ postMessageToSC('pause'); }catch(e){}
-    });
-
+    pauseBtn.addEventListener('click', ()=>{ if (audioEl && !audioEl.paused) audioEl.pause(); if (state.ytPlayer) try{ state.ytPlayer.pauseVideo(); }catch(e){} if (state.scIframe) try{ postMessageToSC('pause'); }catch(e){} });
     stopBtn.addEventListener('click', ()=>{ stopAll(true); });
 
-    function stopAll(clearFile = true){
-      if (audioEl){ audioEl.pause(); audioEl.currentTime = 0; if (clearFile){ audioEl.src = ''; state.fileObjectUrl = null; } }
-      if (state.ytPlayer){ try { state.ytPlayer.stopVideo(); } catch(e){} }
-      if (state.scIframe){ try { postMessageToSC('pause'); } catch(e){} }
-      if (state.raf) cancelAnimationFrame(state.raf);
-      energyHistory.length = 0;
-      state.beatTimestamps = [];
-      detectedBpm.textContent = '—';
-      beatsPerSec.textContent = '—';
-    }
+    function stopAll(clearFile=true){ if (audioEl){ audioEl.pause(); audioEl.currentTime = 0; if (clearFile){ audioEl.src=''; state.fileObjectUrl=null; } } if (state.ytPlayer){ try{ state.ytPlayer.stopVideo(); }catch(e){} } if (state.scIframe){ try{ postMessageToSC('pause'); }catch(e){} } if (state.raf) cancelAnimationFrame(state.raf); energyHistory.length=0; state.beatTimestamps=[]; detectedBpm.textContent='—'; beatsPerSec.textContent='—'; }
 
     volumeEl.addEventListener('input', ()=>{ audioEl.volume = Number(volumeEl.value); state.volume = Number(volumeEl.value); if (state.gainNode) state.gainNode.gain.value = state.volume; });
     gainEl.addEventListener('input', ()=>{ if (state.gainNode) state.gainNode.gain.value = Number(gainEl.value); });
     sensitivityEl.addEventListener('input', ()=>{ state.sensitivity = Number(sensitivityEl.value); });
 
     modeSelect.addEventListener('change', ()=>{ if (modeSelect.value === 'manual') detectedBpm.textContent = manualBpm.value; else detectedBpm.textContent = '—'; });
-
     manualBpm.addEventListener('input', ()=>{ if (modeSelect.value === 'manual') detectedBpm.textContent = manualBpm.value; });
 
-    // ---- GIF management ----
-    function renderGifs(){
-      gifArea.innerHTML = '';
-      state.gifs.forEach((url, idx) => {
-        const card = document.createElement('div');
-        card.className = 'gif-card';
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = 'GIF ' + (idx+1);
-        img.loading = 'lazy';
-        img.addEventListener('error', ()=>{ img.style.opacity = 0.5; img.alt = 'Erro ao carregar'; });
-        // click to remove
-        card.addEventListener('click', ()=>{ state.gifs.splice(idx,1); renderGifs(); });
-        card.appendChild(img);
-        const label = document.createElement('div');
-        label.className = 'small';
-        label.textContent = 'Clique para remover';
-        card.appendChild(label);
-        gifArea.appendChild(card);
-      });
-    }
+    // GIF management
+    function renderGifs(){ gifArea.innerHTML = ''; state.gifs.forEach((url,idx)=>{ const card = document.createElement('div'); card.className='gif-card'; const img = document.createElement('img'); img.src=url; img.alt='GIF '+(idx+1); img.loading='lazy'; img.addEventListener('error', ()=>{ img.style.opacity=0.5; img.alt='Erro ao carregar'; }); card.addEventListener('click', ()=>{ state.gifs.splice(idx,1); renderGifs(); }); card.appendChild(img); const label = document.createElement('div'); label.className='small'; label.textContent='Clique para remover'; card.appendChild(label); gifArea.appendChild(card); }); }
 
-    addGifUrlBtn.addEventListener('click', ()=>{
-      const url = newGifUrl.value.trim();
-      if (!url) return alert('Cole o link do GIF');
-      state.gifs.push(url);
-      newGifUrl.value = '';
-      renderGifs();
-    });
+    addGifUrlBtn.addEventListener('click', ()=>{ const url = newGifUrl.value.trim(); if (!url) return alert('Cole o link do GIF'); state.gifs.push(url); newGifUrl.value=''; renderGifs(); });
+    addGifBtn.addEventListener('click', ()=>{ const url = prompt('Cole o link do GIF (direto .gif)'); if (url){ state.gifs.push(url.trim()); renderGifs(); } });
+    addSampleBtn.addEventListener('click', ()=>{ const samples=['https://i.imgur.com/4AiXzf8.gif','https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif','https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif']; state.gifs.push(...samples); renderGifs(); });
 
-    addGifBtn.addEventListener('click', ()=>{
-      const url = prompt('Cole o link do GIF (direto .gif)');
-      if (url) { state.gifs.push(url.trim()); renderGifs(); }
-    });
-
-    addSampleBtn.addEventListener('click', ()=>{
-      const samples = [
-        'https://i.imgur.com/4AiXzf8.gif',
-        'https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif',
-        'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif'
-      ];
-      state.gifs.push(...samples);
-      renderGifs();
-    });
-
-    resetBtn.addEventListener('click', ()=>{ if (confirm('Resetar a aplicação?')){ state.gifs = []; renderGifs(); stopAll(); mp3Input.value=''; ytInput.value=''; scInput.value=''; } });
+    resetBtn.addEventListener('click', ()=>{ if (confirm('Resetar a aplicação?')){ state.gifs=[]; renderGifs(); stopAll(); mp3Input.value=''; ytInput.value=''; scInput.value=''; trackHistoryEl.innerHTML=''; state.trackHistory=[]; } });
 
     themeSelect.addEventListener('change', ()=>{ document.body.className = themeSelect.value; });
 
-    // ---- File upload handling ----
-    fileInput.addEventListener('change', (ev)=>{
-      const file = ev.target.files[0];
-      if (!file) return;
-      if (state.fileObjectUrl) URL.revokeObjectURL(state.fileObjectUrl);
-      state.fileObjectUrl = URL.createObjectURL(file);
-      audioEl.src = state.fileObjectUrl;
-      audioEl.crossOrigin = "anonymous";
-      audioEl.style.display = 'block';
-      audioEl.play().catch(e=>console.warn('play failed',e));
-      if (!state.audioCtx) initAudioContext();
-      connectAudioElement();
-      state.raf = requestAnimationFrame(analyzeBeat);
-    });
+    // Drag & drop GIFs
+    ['dragenter','dragover'].forEach(e=>{ dropArea.addEventListener(e, (ev)=>{ ev.preventDefault(); dropArea.style.borderColor = 'rgba(255,255,255,0.15)'; }); });
+    ['dragleave','drop'].forEach(e=>{ dropArea.addEventListener(e, (ev)=>{ ev.preventDefault(); dropArea.style.borderColor = 'rgba(255,255,255,0.03)'; }); });
 
-    // ---- YouTube embed (basic) ----
+    dropArea.addEventListener('drop', (ev)=>{ const files = Array.from(ev.dataTransfer.files || []); files.forEach(f=>{ if (f.type.startsWith('image/')){ const url = URL.createObjectURL(f); state.gifs.push(url); renderGifs(); } }); });
+
+    // File input
+    fileInput.addEventListener('change', (ev)=>{ const file = ev.target.files[0]; if (!file) return; if (state.fileObjectUrl) URL.revokeObjectURL(state.fileObjectUrl); state.fileObjectUrl = URL.createObjectURL(file); audioEl.src = state.fileObjectUrl; audioEl.crossOrigin = 'anonymous'; audioEl.style.display='block'; audioEl.play().catch(e=>console.warn('play failed',e)); if (!state.audioCtx) initAudioContext(); connectAudioElement(); state.raf = requestAnimationFrame(analyzeBeat); addToHistory(file.name || 'upload'); });
+
+    // YouTube embedding (basic)
     let ytApiLoaded = false;
-    function loadYouTubeApi(callback){
-      if (ytApiLoaded) { callback(); return; }
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      document.body.appendChild(tag);
-      window.onYouTubeIframeAPIReady = ()=>{ ytApiLoaded = true; callback(); };
-    }
+    function loadYouTubeApi(callback){ if (ytApiLoaded){ callback(); return; } const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.body.appendChild(tag); window.onYouTubeIframeAPIReady = ()=>{ ytApiLoaded = true; callback(); }; }
 
-    function embedYouTube(link){
-      const videoId = extractYouTubeID(link);
-      if (!videoId) return alert('Link YouTube inválido');
-      loadYouTubeApi(()=>{
-        const root = document.getElementById('ytPlayerRoot');
-        root.innerHTML = '';
-        const div = document.createElement('div');
-        div.id = 'yt-player';
-        root.appendChild(div);
-        state.ytPlayer = new YT.Player('yt-player', {
-          height: '200', width: '320', videoId: videoId,
-          playerVars: { autoplay:1, controls:1, modestbranding:1 },
-          events: {
-            onReady: (e)=>{ e.target.playVideo(); /* NOTE: cannot reliably extract audio for analysis due to CORS */ },
-            onStateChange: (e)=>{ /* Could map state to animations if needed */ }
-          }
-        });
-        root.style.display = 'block';
-      });
-    }
+    function extractYouTubeID(url){ try{ const u = new URL(url); if (u.hostname.includes('youtube.com')) return u.searchParams.get('v'); if (u.hostname.includes('youtu.be')) return u.pathname.slice(1); }catch(e){ return null; } return null; }
 
-    function extractYouTubeID(url){
-      try{
-        const u = new URL(url);
-        if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
-        if (u.hostname.includes('youtu.be')) return u.pathname.slice(1);
-      }catch(e){ return null; }
-      return null;
-    }
+    function embedYouTube(link){ const videoId = extractYouTubeID(link); if (!videoId) return alert('Link YouTube inválido'); loadYouTubeApi(()=>{ const root = document.getElementById('ytPlayerRoot'); root.innerHTML = ''; const div = document.createElement('div'); div.id = 'yt-player'; root.appendChild(div); state.ytPlayer = new YT.Player('yt-player',{height:'200',width:'320',videoId:videoId,playerVars:{autoplay:1,controls:1,modestbranding:1},events:{onReady:(e)=>{ e.target.playVideo(); },onStateChange:(e)=>{}}}); root.style.display='block'; }); }
 
-    // ---- SoundCloud embed (iframe) + basic widget control ----
-    function embedSoundCloud(link){
-      // build player URL
-      const root = document.getElementById('scPlayerRoot');
-      root.innerHTML = '';
-      const iframe = document.createElement('iframe');
-      iframe.width = '100%';
-      iframe.height = '120';
-      iframe.scrolling = 'no';
-      iframe.frameBorder = 'no';
-      iframe.allow = 'autoplay';
-      iframe.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(link) + '&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&visual=false';
-      root.appendChild(iframe);
-      root.style.display = 'block';
-      state.scIframe = iframe;
+    // SoundCloud embed
+    function embedSoundCloud(link){ const root = document.getElementById('scPlayerRoot'); root.innerHTML = ''; const iframe = document.createElement('iframe'); iframe.width='100%'; iframe.height='120'; iframe.scrolling='no'; iframe.frameBorder='no'; iframe.allow='autoplay'; iframe.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(link) + '&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&visual=false'; root.appendChild(iframe); root.style.display='block'; state.scIframe = iframe; }
 
-      // Note: SoundCloud Widget API is available (https://developers.soundcloud.com/docs/api/html5-widget)
-      // but cross-origin audio extraction for analysis is usually blocked. We keep widget for playback only.
-    }
+    function postMessageToSC(cmd){ if (!state.scIframe) return; const msg = { method: cmd }; state.scIframe.contentWindow.postMessage(msg, '*'); }
 
-    function postMessageToSC(cmd){
-      if (!state.scIframe) return;
-      const msg = { method: cmd };
-      state.scIframe.contentWindow.postMessage(msg, '*');
-    }
+    // History
+    function addToHistory(entry){ state.trackHistory.unshift({time: new Date().toLocaleString(), entry}); if (state.trackHistory.length>20) state.trackHistory.pop(); renderHistory(); }
+    function renderHistory(){ trackHistoryEl.innerHTML = ''; state.trackHistory.forEach(t=>{ const d = document.createElement('div'); d.className='small'; d.style.padding='6px 4px'; d.textContent = `${t.time} — ${t.entry}`; trackHistoryEl.appendChild(d); }); }
 
-    // ---- Init sample state ----
-    document.addEventListener('DOMContentLoaded', ()=>{
-      state.gifs = ['https://i.imgur.com/4AiXzf8.gif'];
-      renderGifs();
-    });
+    // Theme customizer
+    applyThemeBtn.addEventListener('click', ()=>{ document.documentElement.style.setProperty('--accent', accentColor.value); document.documentElement.style.setProperty('--bg', bgColor.value); document.documentElement.style.setProperty('--card', shadeColor(bgColor.value, -8)); });
+    resetThemeBtn.addEventListener('click', ()=>{ document.documentElement.style.removeProperty('--accent'); document.documentElement.style.removeProperty('--bg'); document.documentElement.style.removeProperty('--card'); accentColor.value = '#7c4dff'; bgColor.value = '#0b0b0b'; });
 
-    // ---- Optional: lazy resume audio on user interaction so autoplay works on mobile ----
-    ['click','touchstart'].forEach(evt => {
-      window.addEventListener(evt, async ()=>{
-        if (state.audioCtx && state.audioCtx.state === 'suspended') try{ await state.audioCtx.resume(); }catch(e){}
-      }, { once:false });
-    });
+    // simple shading helper
+    function shadeColor(hex,percent){ const f = parseInt(hex.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent; const R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF; const r=Math.round((t-R)*p/100)+R,g=Math.round((t-G)*p/100)+G,b=Math.round((t-B)*p/100)+B; return `#${(0x1000000 + (r<<16) + (g<<8) + b).toString(16).slice(1)}`; }
 
-    // ---- Cleanup on unload ----
+    // Init sample state
+    document.addEventListener('DOMContentLoaded', ()=>{ state.gifs = ['https://i.imgur.com/4AiXzf8.gif']; renderGifs(); document.body.className = 'theme-neon'; renderHistory(); });
+
+    // lazy resume audio
+    ['click','touchstart'].forEach(evt=>{ window.addEventListener(evt, async ()=>{ if (state.audioCtx && state.audioCtx.state === 'suspended') try{ await state.audioCtx.resume(); }catch(e){} },{once:false}); });
+
+    // cleanup
     window.addEventListener('beforeunload', ()=>{ if (state.raf) cancelAnimationFrame(state.raf); if (state.sourceNode) try{ state.sourceNode.disconnect(); }catch(e){} });
 
   </script>
-
 </body>
 </html>
