@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GIF Dançante — Player</title>
+  <meta name="description" content="Cole um link de música (MP3 ou YouTube), escolha GIFs e veja eles dançarem sincronizados com a música." />
+
+  <!--
+    Projeto: GIF Dançante
+    Arquivo único: index.html
+
+    Recursos implementados:
+    - Reprodutor para MP3 direto + suporte a embed do YouTube (iframe API para controle básico)
+    - Detecção de batida/volume via Web Audio API (análise de frequência/energia)
+    - Sincronização do GIF com o ritmo (BPM manual ou detectado automaticamente)
+    - Múltiplos GIFs, com grid responsivo
+    - Temas (Dark, Neon, Vaporwave, Minimal)
+    - Layout responsivo mobile/desktop
+    - Controles: play/pause, volume, gain, sensibilidade do detector, BPM manual/auto
+
+    Instruções rápidas:
+    1) Salve este arquivo como `index.html` em um repositório GitHub. 
+    2) Coloque seus GIFs em URLs públicos (GitHub raw, Imgur, etc.) ou use links diretos.
+    3) Para usar YouTube: cole o link do vídeo. O player embutido tocará o vídeo e poderemos analisar áudio (quando permitido) via anulações - note que por motivos de CORS a análise do áudio do iframe é limitada; a melhor experiência de análise vem com arquivos MP3 diretos.
+    4) Habilite GitHub Pages no repositório para publicar.
+
+    Observações técnicas:
+    - A extração de áudio do YouTube para análise é frequentemente bloqueada por políticas de CORS e sandbox; o código tenta usar a API do YouTube para controlar reprodução, mas a detecção automática de batida é muito mais confiável com MP3s diretos.
+    - O detector de batidas aqui usa uma abordagem simples baseada em energia instantânea + histórico (afastado para ser robusto e funcionar em browsers modernos).
+  -->
+
+  <style>
+    :root{
+      --bg: #0d0d0d;
+      --card: #141414;
+      --text: #eaeaea;
+      --accent: #4caf50;
+      --muted: #9aa0a6;
+    }
+
+    /* Theme: Neon */
+    .theme-neon{ --accent: #ff2d95; --bg: #07010a; --card:#0f0710; }
+    .theme-vapor{ --accent: #7a5cff; --bg:#0b0b1a; --card:#0f0e24; }
+    .theme-min{ --accent: #03a9f4; --bg:#ffffff; --card:#f4f6f8; --text:#111; --muted:#666; }
+
+    html,body{ height:100%; margin:0; }
+    body{
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background: linear-gradient(180deg,var(--bg), #070707 80%);
+      color:var(--text);
+      display:flex; align-items:flex-start; justify-content:center; padding:24px;
+      box-sizing: border-box;
+    }
+
+    .app{
+      width:100%; max-width:1100px; background:linear-gradient(180deg,var(--card), #0b0b0b);
+      border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,0.6); padding:18px; box-sizing:border-box;
+    }
+
+    header{ display:flex; gap:12px; align-items:center; justify-content:space-between; }
+    h1{ margin:0; font-size:1.2rem; }
+    .subtitle{ color:var(--muted); font-size:0.9rem }
+
+    .controls{ display:grid; grid-template-columns:1fr 280px; gap:16px; margin-top:16px; align-items:start; }
+
+    .card{ background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; }
+
+    .inputs{ display:flex; flex-direction:column; gap:10px; }
+    input[type=text], select{ padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--text); outline:none; }
+
+    .row{ display:flex; gap:8px; }
+    button{ background:var(--accent); color: #fff; border: none; padding:10px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
+    button.ghost{ background:transparent; border:1px solid rgba(255,255,255,0.06); }
+
+    .player{ display:flex; gap:8px; align-items:center; }
+    .player audio{ width:100%; }
+
+    .gif-area{ margin-top:18px; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; }
+    .gif-card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:8px; border-radius:8px; display:flex; flex-direction:column; gap:8px; align-items:center; }
+    .gif-card img{ width:100%; height:140px; object-fit:contain; border-radius:6px; transform-origin:center center; }
+
+    .settings{ display:flex; flex-direction:column; gap:8px; }
+    label{ font-size:0.85rem; color:var(--muted); }
+
+    .small{ font-size:0.85rem; color:var(--muted); }
+
+    footer{ margin-top:18px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+
+    /* Responsive */
+    @media (max-width:880px){
+      .controls{ grid-template-columns: 1fr; }
+      .player{ flex-direction:column; align-items:stretch; }
+    }
+
+    /* Animation helper classes - we'll manipulate animation-duration to sync to beat */
+    .beat-animation{ animation-name:beatMove; animation-iteration-count:infinite; animation-timing-function: ease-in-out; }
+    @keyframes beatMove{
+      0% { transform: translateY(0) scale(1) rotate(0deg); }
+      25% { transform: translateY(-8px) scale(1.02) rotate(2deg); }
+      50% { transform: translateY(0) scale(1) rotate(0deg); }
+      75% { transform: translateY(-6px) scale(1.01) rotate(-2deg); }
+      100% { transform: translateY(0) scale(1) rotate(0deg); }
+    }
+
+    /* subtle glow for neon */
+    .theme-neon .gif-card img{ filter: drop-shadow(0 6px 18px rgba(255,45,149,0.25)); }
+
+    /* controls state */
+    .muted{ opacity:0.5 }
+
+  </style>
+</head>
+<body class="theme-neon">
+  <div class="app">
+    <header>
+      <div>
+        <h1>GIF Dançante</h1>
+        <div class="subtitle">Cole link da música (MP3 ou YouTube), adicione GIFs e deixe-os dançar ao ritmo.</div>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select id="themeSelect" title="Tema">
+          <option value="theme-neon">Neon</option>
+          <option value="theme-vapor">Vaporwave</option>
+          <option value="theme-min">Minimal</option>
+        </select>
+        <button id="addGifBtn" class="ghost">Adicionar GIF</button>
+        <button id="resetBtn" class="ghost">Reset</button>
+      </div>
+    </header>
+
+    <div class="controls">
+      <div class="card">
+        <div class="inputs">
+          <label>Link da música (MP3 direto) — para melhor análise, use MP3 direto</label>
+          <input id="mp3Input" type="text" placeholder="https://exemplo.com/minha-musica.mp3" />
+
+          <label>Ou cole um link do YouTube</label>
+          <input id="ytInput" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+
+          <div class="row">
+            <button id="playBtn">▶️ Play</button>
+            <button id="pauseBtn" class="ghost">⏸ Pause</button>
+            <button id="stopBtn" class="ghost">⏹ Stop</button>
+          </div>
+
+          <div class="player small">
+            <label style="width:70px;">Volume</label>
+            <input id="volume" type="range" min="0" max="1" step="0.01" value="0.9" />
+          </div>
+
+          <div class="player small">
+            <label style="width:70px;">Gain</label>
+            <input id="gain" type="range" min="0" max="3" step="0.01" value="1.0" />
+          </div>
+
+          <div class="row" style="align-items:center;">
+            <label style="margin-right:6px;">Detecção</label>
+            <select id="modeSelect">
+              <option value="auto">Auto (analisar)</option>
+              <option value="manual">Manual BPM</option>
+            </select>
+            <input id="manualBpm" type="number" min="30" max="300" value="120" style="width:96px; margin-left:8px;"/>
+          </div>
+
+          <label>Sensibilidade do detector</label>
+          <input id="sensitivity" type="range" min="0.5" max="3.0" step="0.01" value="1.3" />
+
+          <label class="small">Observação: análise de YouTube pode ser limitada por CORS; MP3 direto dá melhor resultado.</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="settings">
+          <label>GIFs adicionados (clique em um para remover)</label>
+          <div id="gifArea" class="gif-area"></div>
+
+          <div>
+            <input id="newGifUrl" type="text" placeholder="Cole link direto do GIF (ex: https://...gif)" />
+            <div class="row" style="margin-top:8px;">
+              <button id="addGifUrlBtn">Adicionar URL</button>
+              <button id="addSampleBtn" class="ghost">Adicionar amostras</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="small">BPM detectado: <span id="detectedBpm">—</span> | Beats/s: <span id="beatsPerSec">—</span></div>
+      <div class="small">Feito para GitHub Pages • Salve como index.html</div>
+    </footer>
+  </div>
+
+  <!-- Elementos invisíveis para player -->
+  <audio id="audioEl" crossorigin="anonymous"></audio>
+  <div id="ytPlayerRoot" style="display:none"></div>
+
+  <script>
+    // ---- Helpers & State ----
+    const state = {
+      audioCtx: null,
+      analyser: null,
+      sourceNode: null,
+      gainNode: null,
+      raf: null,
+      lastBeatTime: 0,
+      beatInterval: 500,
+      bpm: null,
+      mode: 'auto',
+      gifs: [],
+      sensitivity: 1.3,
+      volume: 0.9,
+    };
+
+    // DOM
+    const mp3Input = document.getElementById('mp3Input');
+    const ytInput = document.getElementById('ytInput');
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const audioEl = document.getElementById('audioEl');
+    const gifArea = document.getElementById('gifArea');
+    const addGifBtn = document.getElementById('addGifBtn');
+    const addGifUrlBtn = document.getElementById('addGifUrlBtn');
+    const newGifUrl = document.getElementById('newGifUrl');
+    const addSampleBtn = document.getElementById('addSampleBtn');
+    const detectedBpm = document.getElementById('detectedBpm');
+    const beatsPerSec = document.getElementById('beatsPerSec');
+    const modeSelect = document.getElementById('modeSelect');
+    const manualBpm = document.getElementById('manualBpm');
+    const sensitivityEl = document.getElementById('sensitivity');
+    const volumeEl = document.getElementById('volume');
+    const gainEl = document.getElementById('gain');
+    const themeSelect = document.getElementById('themeSelect');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Initialize
+    function initAudioContext(){
+      if (state.audioCtx) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      state.audioCtx = new AudioContext();
+      state.analyser = state.audioCtx.createAnalyser();
+      state.analyser.fftSize = 2048; // resolution
+      state.gainNode = state.audioCtx.createGain();
+      state.gainNode.gain.value = state.volume;
+      state.analyser.smoothingTimeConstant = 0.85;
+    }
+
+    // Create/update source from audio element
+    function connectAudioElement(){
+      if (!state.audioCtx) initAudioContext();
+      if (state.sourceNode) {
+        try { state.sourceNode.disconnect(); } catch(e){}
+      }
+      state.sourceNode = state.audioCtx.createMediaElementSource(audioEl);
+      state.sourceNode.connect(state.gainNode);
+      state.gainNode.connect(state.analyser);
+      state.analyser.connect(state.audioCtx.destination);
+    }
+
+    // Simple beat detection using energy vs history
+    const energyHistory = [];
+    function analyzeBeat(){
+      const bufferLength = state.analyser.fftSize;
+      const data = new Uint8Array(state.analyser.frequencyBinCount);
+      state.analyser.getByteFrequencyData(data);
+      // compute instant energy
+      let sum = 0;
+      for (let i=0;i<data.length;i++){ sum += data[i]*data[i]; }
+      const instantEnergy = sum / data.length;
+
+      // history
+      energyHistory.push(instantEnergy);
+      if (energyHistory.length > 43) energyHistory.shift();
+
+      // average
+      const avg = energyHistory.reduce((a,b)=>a+b,0) / energyHistory.length;
+      const sensitivity = parseFloat(sensitivityEl.value) || 1.3;
+
+      // beat if instant > sensitivity * avg
+      if (instantEnergy > sensitivity * avg && Date.now() - state.lastBeatTime > 120) {
+        state.lastBeatTime = Date.now();
+        onBeatDetected();
+      }
+
+      // update estimated BPM using last few beats (very rough)
+      // We'll store last 8 beat timestamps
+      if (!state._beatTimestamps) state._beatTimestamps = [];
+      if (state.lastBeatTime && (state._beatTimestamps.length==0 || state._beatTimestamps[state._beatTimestamps.length-1] !== state.lastBeatTime)){
+        state._beatTimestamps.push(state.lastBeatTime);
+        if (state._beatTimestamps.length > 8) state._beatTimestamps.shift();
+      }
+      if (state._beatTimestamps.length >= 2){
+        const diffs = [];
+        for (let i=1;i<state._beatTimestamps.length;i++) diffs.push(state._beatTimestamps[i]-state._beatTimestamps[i-1]);
+        const avgMs = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+        const bpm = Math.round(60000/avgMs);
+        state.bpm = bpm;
+        detectedBpm.textContent = bpm;
+        beatsPerSec.textContent = (bpm/60).toFixed(2);
+      }
+
+      // visual feedback based on overall level
+      const rms = Math.sqrt(instantEnergy);
+      applyVisuals(rms);
+
+      state.raf = requestAnimationFrame(analyzeBeat);
+    }
+
+    function applyVisuals(rms){
+      // Map rms to animation-duration (lower duration = faster beat)
+      // baseDuration determined by BPM if manual
+      const mode = modeSelect.value;
+      let baseMs = 500; // default
+      if (mode === 'manual'){
+        const bpm = Number(manualBpm.value) || 120;
+        baseMs = 60000 / bpm; // ms per beat
+      } else if (state.bpm){
+        baseMs = 60000 / state.bpm;
+      }
+
+      // compute factor from rms (0..1 roughly) and gain
+      const gain = Number(gainEl.value) || 1.0;
+      const normalized = Math.min(2, Math.max(0.05, (rms/20) * gain));
+
+      // final duration
+      const durationMs = Math.max(80, baseMs / normalized);
+      // set CSS animation-duration for all gifs
+      const imgs = document.querySelectorAll('.gif-card img');
+      imgs.forEach(img => {
+        img.classList.add('beat-animation');
+        img.style.animationDuration = (durationMs/1000).toFixed(3) + 's';
+      });
+    }
+
+    function onBeatDetected(){
+      // flash or pulse: we can briefly scale gifs
+      const imgs = document.querySelectorAll('.gif-card img');
+      imgs.forEach(img => {
+        img.style.transform = 'translateY(-4px) scale(1.03)';
+        setTimeout(()=>{ img.style.transform = ''; }, 120);
+      });
+    }
+
+    // ---- Controls ----
+    playBtn.addEventListener('click', async ()=>{
+      // try resume audio context on user gesture
+      if (!state.audioCtx) initAudioContext();
+      if (state.audioCtx.state === 'suspended') await state.audioCtx.resume();
+
+      // decide source: mp3 or youtube
+      const mp3 = mp3Input.value.trim();
+      const yt = ytInput.value.trim();
+      stopAll();
+
+      if (mp3){
+        audioEl.src = mp3;
+        audioEl.crossOrigin = "anonymous";
+        audioEl.loop = false;
+        audioEl.volume = Number(volumeEl.value) || 0.9;
+        connectAudioElement();
+        audioEl.play().catch(e=>console.warn('play failed',e));
+        state.raf = requestAnimationFrame(analyzeBeat);
+      } else if (yt){
+        // Use YouTube IFrame Player API to embed and control playback.
+        // Note: extracting raw audio for analysis from YouTube iframe is restricted by browser security policies.
+        // We'll embed video and try to analyze if CORS allows (usually doesn't). Best-effort only.
+        embedYouTube(yt);
+      } else {
+        alert('Cole um link MP3 direto ou um link do YouTube.');
+      }
+    });
+
+    pauseBtn.addEventListener('click', ()=>{ if (audioEl && !audioEl.paused) audioEl.pause(); if (state.ytPlayer) state.ytPlayer.pauseVideo(); });
+    stopBtn.addEventListener('click', ()=>{ stopAll(); });
+
+    function stopAll(){
+      if (audioEl){ audioEl.pause(); audioEl.currentTime = 0; audioEl.src = '' }
+      if (state.ytPlayer){ try { state.ytPlayer.stopVideo(); } catch(e){} }
+      if (state.raf) cancelAnimationFrame(state.raf);
+      energyHistory.length = 0;
+      state._beatTimestamps = [];
+      detectedBpm.textContent = '—';
+      beatsPerSec.textContent = '—';
+    }
+
+    volumeEl.addEventListener('input', ()=>{ audioEl.volume = Number(volumeEl.value); state.volume = Number(volumeEl.value); if (state.gainNode) state.gainNode.gain.value = state.volume; });
+    gainEl.addEventListener('input', ()=>{ if (state.gainNode) state.gainNode.gain.value = Number(gainEl.value); });
+    sensitivityEl.addEventListener('input', ()=>{ state.sensitivity = Number(sensitivityEl.value); });
+
+    modeSelect.addEventListener('change', ()=>{ if (modeSelect.value === 'manual') detectedBpm.textContent = manualBpm.value; else detectedBpm.textContent = '—'; });
+
+    manualBpm.addEventListener('input', ()=>{ if (modeSelect.value === 'manual') detectedBpm.textContent = manualBpm.value; });
+
+    // ---- GIF management ----
+    function renderGifs(){
+      gifArea.innerHTML = '';
+      state.gifs.forEach((url, idx) => {
+        const card = document.createElement('div');
+        card.className = 'gif-card';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'GIF ' + (idx+1);
+        img.loading = 'lazy';
+        img.addEventListener('error', ()=>{ img.style.opacity = 0.5; img.alt = 'Erro ao carregar'; });
+        // click to remove
+        card.addEventListener('click', ()=>{ state.gifs.splice(idx,1); renderGifs(); });
+        card.appendChild(img);
+        const label = document.createElement('div');
+        label.className = 'small';
+        label.textContent = 'Clique para remover';
+        card.appendChild(label);
+        gifArea.appendChild(card);
+      });
+    }
+
+    addGifUrlBtn.addEventListener('click', ()=>{
+      const url = newGifUrl.value.trim();
+      if (!url) return alert('Cole o link do GIF');
+      state.gifs.push(url);
+      newGifUrl.value = '';
+      renderGifs();
+    });
+
+    addGifBtn.addEventListener('click', ()=>{
+      // quick prompt — mobile friendly
+      const url = prompt('Cole o link do GIF (direto .gif)');
+      if (url) { state.gifs.push(url.trim()); renderGifs(); }
+    });
+
+    addSampleBtn.addEventListener('click', ()=>{
+      // sample GIFs (public links)
+      const samples = [
+        'https://i.imgur.com/4AiXzf8.gif',
+        'https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif',
+        'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif'
+      ];
+      state.gifs.push(...samples);
+      renderGifs();
+    });
+
+    resetBtn.addEventListener('click', ()=>{ if (confirm('Resetar a aplicação?')){ state.gifs = []; renderGifs(); stopAll(); mp3Input.value=''; ytInput.value=''; } });
+
+    // theme
+    themeSelect.addEventListener('change', ()=>{
+      document.body.className = themeSelect.value;
+    });
+
+    // ---- YouTube embed (basic) ----
+    // Load IFrame API when needed
+    let ytApiLoaded = false;
+    function loadYouTubeApi(callback){
+      if (ytApiLoaded) { callback(); return; }
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.body.appendChild(tag);
+      window.onYouTubeIframeAPIReady = ()=>{ ytApiLoaded = true; callback(); };
+    }
+
+    function embedYouTube(link){
+      const videoId = extractYouTubeID(link);
+      if (!videoId) return alert('Link YouTube inválido');
+      loadYouTubeApi(()=>{
+        // create player container
+        const root = document.getElementById('ytPlayerRoot');
+        root.innerHTML = '';
+        const div = document.createElement('div');
+        div.id = 'yt-player';
+        root.appendChild(div);
+        state.ytPlayer = new YT.Player('yt-player', {
+          height: '360', width: '640', videoId: videoId,
+          playerVars: { autoplay:1, controls:1, modestbranding:1 },
+          events: {
+            onReady: (e)=>{ e.target.playVideo(); /* NOTE: cannot reliably extract audio for analysis due to CORS */ },
+            onStateChange: (e)=>{ /* Could map state to animations */ }
+          }
+        });
+        root.style.display = 'block';
+      });
+    }
+
+    function extractYouTubeID(url){
+      try{
+        const u = new URL(url);
+        if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+        if (u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+      }catch(e){ return null; }
+      return null;
+    }
+
+    // ---- Init sample state ----
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // add 2 sample gifs
+      state.gifs = ['https://i.imgur.com/4AiXzf8.gif'];
+      renderGifs();
+    });
+
+    // ---- Optional: lazy resume audio on user interaction so autoplay works on mobile ----
+    ['click','touchstart'].forEach(evt => {
+      window.addEventListener(evt, async ()=>{
+        if (state.audioCtx && state.audioCtx.state === 'suspended') try{ await state.audioCtx.resume(); }catch(e){}
+      }, { once:false });
+    });
+
+    // ---- Cleanup on unload ----
+    window.addEventListener('beforeunload', ()=>{ if (state.raf) cancelAnimationFrame(state.raf); if (state.sourceNode) try{ state.sourceNode.disconnect(); }catch(e){} });
+
+  </script>
+
+</body>
+</html>
