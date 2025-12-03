@@ -435,5 +435,49 @@
     window.addEventListener('beforeunload', ()=>{ if (state.raf) cancelAnimationFrame(state.raf); if (state.sourceNode) try{ state.sourceNode.disconnect(); }catch(e){} });
 
   </script>
+  <!-- Área de Desenho -->
+  <section class="panel">
+    <h2>🖌️ Quadro de Desenho</h2>
+    <div class="draw-container">
+      <canvas id="drawCanvas" width="600" height="400"></canvas>
+    </div>
+    <div class="draw-controls">
+      <label>Cor do pincel:
+        <input type="color" id="brushColor" value="#ffffff" />
+      </label>
+      <label>Tamanho:
+        <input type="range" id="brushSize" min="1" max="50" value="5" />
+      </label>
+      <button id="clearCanvas">Limpar</button>
+    </div>
+  </section>
+
+  <script>
+    // === Sistema de Desenho ===
+    const canvas = document.getElementById("drawCanvas");
+    const ctx = canvas.getContext("2d");
+    let drawing = false;
+
+    canvas.addEventListener("mousedown", () => drawing = true);
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mouseleave", () => drawing = false);
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!drawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      ctx.fillStyle = document.getElementById("brushColor").value;
+      const size = document.getElementById("brushSize").value;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    document.getElementById("clearCanvas").addEventListener("click", () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  </script>
+
 </body>
 </html>
